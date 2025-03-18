@@ -34,6 +34,13 @@ void rigidBody_update(rigidBody *r){
 	r->pos.f[1] += r->vel.f[1];
 	r->vel.f[0] *= constant_friction;
 	r->vel.f[1] *= constant_friction;
+	//
+	// Small velocity threshold
+	float min_velocity = 0.01;
+
+	// Clamp small velocities to zero
+	if (fabs(r->vel.f[0]) < min_velocity) r->vel.f[0] = 0;
+	if (fabs(r->vel.f[1]) < min_velocity) r->vel.f[1] = 0;
 }
 void rigidBody_applyGravity(rigidBody *r){
 	r->vel.f[1] += 9.8 * deltaTime;
@@ -84,6 +91,20 @@ void rigidBody_collision(rigidBody *r1, rigidBody *r2){
 		r1->vel.f[1] -= impulse * normalized_y;
 		r2->vel.f[0] += impulse * normalized_x;
 		r2->vel.f[1] += impulse * normalized_y;
+		
+		// Compute penetration depth
+		float penetration_depth = radius_sum - distance;
+
+		// Push objects apart based on mass ratio (prevents jittering)
+		float correction_factor = 0.5;  // Adjust between 0.1 - 0.5 for stability
+		float correction_x = penetration_depth * normalized_x * correction_factor;
+		float correction_y = penetration_depth * normalized_y * correction_factor;
+
+		// Move each object away from the other
+		r1->pos.f[0] -= correction_x;
+		r1->pos.f[1] -= correction_y;
+		r2->pos.f[0] += correction_x;
+		r2->pos.f[1] += correction_y;
 	}
 }
 
@@ -301,4 +322,3 @@ LRESULT CALLBACK proc(HWND window, UINT message, WPARAM wp, LPARAM lp){
 	}
 	return 0;
 }
-
